@@ -1,0 +1,62 @@
+openapi: 3.0.0
+info:
+  title: API Asystenta Głosowego do Głosowania
+  description: API do obsługi konwersacji z asystentem głosowym. Przetwarza tekst od użytkownika i zwraca odpowiedź systemu w formie tekstowej i dźwiękowej.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:5000
+    description: Lokalny serwer deweloperski
+
+paths:
+  /api/dialog:
+    post:
+      summary: Przetwarza wiadomość od użytkownika i zwraca odpowiedź systemu.
+      description: |
+        Główny endpoint aplikacji. Przyjmuje tekst rozpoznany z mowy użytkownika, 
+        przetwarza go przez menedżera dialogu i zwraca odpowiedź tekstową 
+        oraz URL do pliku audio z syntezą mowy.
+      tags:
+        - Dialog
+      requestBody:
+        description: Obiekt JSON z tekstem od użytkownika.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Tekst rozpoznany z mowy użytkownika.
+                  example: "Chciałbym zagłosować"
+              required:
+                - text
+      responses:
+        '200':
+          description: Pomyślna odpowiedź systemu.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  displayText:
+                    type: string
+                    description: Tekst odpowiedzi do wyświetlenia na frontendzie.
+                    example: "Na którego kandydata chcesz zagłosować?"
+                  audioUrl:
+                    type: string
+                    format: uri
+                    description: Pełny URL do pliku audio z wygenerowaną odpowiedzią.
+                    example: "http://localhost:5000/audio/response_165934287.wav"
+        '400':
+          description: Błędne zapytanie.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Opis błędu.
+                    example: "Pole 'text' jest wymagane w ciele zapytania."
