@@ -51,11 +51,7 @@ def handle_dialog():
         return jsonify({"error": "The 'text' field is required in the request body."}), 400
 
     user_text = data.get('text')
-
-    # Use the dialogue manager instance to get a response
     response_text = dialogue_manager_instance.process_message(user_text)
-
-    # Generate audio for the response
     audio_url = generate_audio(response_text)
 
     if not audio_url:
@@ -68,9 +64,34 @@ def handle_dialog():
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
-    """Serves an audio file from the audio_responses directory."""
+    """
+    Serves a specific audio file.
+    This endpoint is used by the frontend to fetch the audio file generated
+    in response to a dialog POST request. The filename is provided in the
+    'audioUrl' field of the /api/dialog response.
+    ---
+    tags:
+      - Audio
+    parameters:
+      - name: filename
+        in: path
+        type: string
+        required: true
+        description: The name of the .wav file to retrieve (e.g., response_some_uuid.wav).
+    responses:
+      200:
+        description: The audio file in .wav format.
+        content:
+          audio/wav:
+            schema:
+              type: string
+              format: binary
+      404:
+        description: The requested audio file was not found.
+    """
     print(f"Request to serve audio file: {filename}")
     return send_from_directory(AUDIO_DIR, filename)
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
