@@ -51,7 +51,9 @@ def handle_dialog():
         return jsonify({"error": "The 'text' field is required in the request body."}), 400
 
     user_text = data.get('text')
-    response_text = dialogue_manager_instance.process_message(user_text)
+    response_object = dialogue_manager_instance.process_message(user_text)
+    response_text = response_object.get("text")
+    response_data = response_object.get("data")
     audio_url = generate_audio(response_text)
 
     if not audio_url:
@@ -59,7 +61,8 @@ def handle_dialog():
 
     return jsonify({
         "displayText": response_text,
-        "audioUrl": audio_url
+        "audioUrl": audio_url,
+        "payload": response_data
     })
 
 @app.route('/audio/<path:filename>')
