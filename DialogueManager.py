@@ -18,17 +18,21 @@ class DialogueManager:
             self.candidates = ["Default Candidate A", "Default Candidate B"]
             self.election_title = "Default Election"
 
-        print(f"DialogueManager initialized for '{self.election_title}', state: INITIAL")
+        print(f"DialogueManager initialized/reset for '{self.election_title}', state: INITIAL")
 
     def process_message(self, user_text):
+        if user_text == '__START_CONVERSATION__':
+            self.__init__()
+            user_text = "start"
+
         user_text = user_text.lower()
         response = {"text": "Nie rozumiem. Czy możesz powtórzyć?", "data": None}
 
         if self.state == "INITIAL":
             if "start" in user_text or "głos" in user_text or "tak" in user_text:
                 self.state = "AWAITING_VOTE"
-                candidates_str = ", ".join(self.candidates)
-                response_text = f"Dobrze, zaczynamy głosowanie. Dostępni kandydaci to: {candidates_str}. Na kogo chcesz zagłosować?"
+                candidates_str = "\n".join(f"- {name}" for name in self.candidates)
+                response_text = f"Proces weryfikacji został zakończony pomyślnie. Przechodzimy do wyboru kandydatów. Dostępni kandydaci to:\n {candidates_str}\nNa kogo chcesz oddać swój głos?"
                 response = {"text": response_text, "data": self.candidates}
                 print(f"State transition: INITIAL -> AWAITING_VOTE")
             else:
@@ -41,13 +45,13 @@ class DialogueManager:
                     self.user_choice = candidate
                     self.state = "AWAITING_VOTE_CONFIRMATION"
                     response[
-                        "text"] = f"Wybrano opcję: {self.user_choice}. Czy potwierdzasz swój wybór? Powiedz 'tak' lub 'nie'."
+                        "text"] = f"Wybrano opcję: {self.user_choice}. Czy potwierdzasz swój wybór? Powiedz 'potwierdzam' lub 'anuluj'."
                     print(f"State transition: AWAITING_VOTE -> AWAITING_VOTE_CONFIRMATION")
                     found_candidate = True
                     break
 
             if not found_candidate:
-                response["text"] = "Nie rozpoznałem tego kandydata. Proszę, wybierz jednego z listy."
+                response["text"] = "Nie rozpoznałem podanego kandydata. Proszę, podaj imię i nazwisko tego z listy, który znajduje się po prawej stronie."
 
         elif self.state == "AWAITING_VOTE_CONFIRMATION":
             if "tak" in user_text or "potwierdzam" in user_text:
@@ -60,8 +64,8 @@ class DialogueManager:
 
                 print(f"VOTE SAVED for: {self.user_choice}")
                 self.state = "FINISHED"
-                response[
-                    "text"] = f"Dziękuję. Twój głos na kandydata '{self.user_choice}' został zapisany. Do widzenia!"
+                response["text"] = f"Dziękuję. Twój głos na kandydata '{self.user_choice}' został bezpiecznie zapisany. Do widzenia!"
+                response["data"] = {"status": "finished"}
                 print(f"State transition: AWAITING_VOTE_CONFIRMATION -> FINISHED")
             elif "nie" in user_text or "anuluj" in user_text:
                 self.state = "AWAITING_VOTE"
@@ -71,14 +75,6 @@ class DialogueManager:
                 print(f"State transition: AWAITING_VOTE_CONFIRMATION -> AWAITING_VOTE")
             else:
                 response["text"] = "Proszę, odpowiedz 'tak' lub 'nie', aby potwierdzić lub anulować swój wybór."
-
-        elif self.state == "FINISHED":
-            if "restart" in user_text or "jeszcze raz" in user_text:
-                self.__init__()
-                response["text"] = "Dobrze, zaczynamy od nowa. Powiedz 'start', aby rozpocząć."
-            else:
-                response[
-                    "text"] = "Proces głosowania został już zakończony. Możesz powiedzieć 'restart', aby zacząć od nowa."
 
         return response
 
