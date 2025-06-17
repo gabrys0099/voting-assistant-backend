@@ -1,5 +1,6 @@
 import json
 import csv
+from collections import Counter
 from datetime import datetime
 
 
@@ -7,6 +8,7 @@ class DialogueManager:
     def __init__(self):
         self.state = "INITIAL"
         self.user_choice = None
+        self.start_conversation = False
         try:
             with open('candidates.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -19,10 +21,31 @@ class DialogueManager:
 
         print(f"DialogueManager initialized/reset for '{self.election_title}', state: INITIAL")
 
+    def get_election_results(self):
+        try:
+            with open('results.csv', 'r', newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                votes = [row[0] for row in reader]
+                vote_counts = Counter(votes)
+
+                if not vote_counts:
+                    return {"text": "Nie oddano jeszcze żadnych głosów.", "payload": None}
+
+                results_text = "Oto aktualne wyniki głosowania: "
+                results_parts = [f"{candidate} - {count} głosów" for candidate, count in vote_counts.items()]
+                results_text += ", ".join(results_parts) + "."
+
+                return {"text": results_text, "payload": None}
+        except FileNotFoundError:
+            return {"text": "Nie oddano jeszcze żadnych głosów, plik z wynikami nie istnieje.", "payload": None}
+        except Exception as e:
+            print(f"Błąd odczytu wyników: {e}")
+            return {"text": "Wystąpił błąd podczas odczytywania wyników.", "payload": None}
+
     def process_message(self, user_text):
         if user_text == '__START_CONVERSATION__':
             self.__init__()
-            user_text = "start"
+            user_text = "Dzień dobry"
 
         user_text = user_text.lower()
         response = {"text": "Nie rozumiem. Czy możesz powtórzyć?", "data": None}
@@ -31,11 +54,17 @@ class DialogueManager:
             if "start" in user_text or "głos" in user_text or "tak" in user_text:
                 self.state = "AWAITING_VOTE"
                 candidates_str = "\n".join(f"- {name}" for name in self.candidates)
-                response_text = f"Proces weryfikacji został zakończony pomyślnie. Przechodzimy do wyboru kandydatów. Dostępni kandydaci to:\n {candidates_str}\nNa kogo chcesz oddać swój głos?"
+                response_text = f"Przechodzimy do wyboru kandydatów. Dostępni kandydaci to:\n {candidates_str}\nNa kogo chcesz oddać swój głos?"
                 response = {"text": response_text, "data": self.candidates}
                 print(f"State transition: INITIAL -> AWAITING_VOTE")
+            elif "wyniki" in user_text:
+                response = self.get_election_results()
             else:
-                response["text"] = "Cześć! Jestem asystentem do głosowania. Powiedz 'start', aby rozpocząć."
+                if self.start_conversation:
+                    response['text'] = "Nie zrozumiałem Twojego wyboru. Chcesz oddać głos, czy sprawdzić wyniki?"
+                else:
+                    self.start_conversation = True
+                    response["text"] = "Cześć! Jestem asystentem do głosowania. Proces weryfikacji został zakończony pomyślnie. Chcesz oddać głos, czy sprawdzić wyniki?"
 
         elif self.state == "AWAITING_VOTE":
             found_candidate = False
@@ -74,6 +103,7 @@ class DialogueManager:
                 print(f"State transition: AWAITING_VOTE_CONFIRMATION -> AWAITING_VOTE")
             else:
                 response["text"] = "Proszę, odpowiedz 'tak' lub 'nie', aby potwierdzić lub anulować swój wybór."
+
 
         return response
 
